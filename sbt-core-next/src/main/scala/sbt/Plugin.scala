@@ -20,10 +20,10 @@ object SbtUIPlugin extends AutoPlugin {
     UIKeys.registeredProtocolConversions in Global <<= (UIKeys.registeredProtocolConversions in Global) ?? Nil,
     UIKeys.registeredSerializers in Global <<= (UIKeys.registeredSerializers in Global) ?? Nil)
 
-  def registerTaskSerialization[T](key: TaskKey[T])(implicit serializer: SbtSerializer[T], mf: Manifest[T]): Setting[_] =
-    UIKeys.registeredSerializers in Global += RegisteredSerializer(serializer)(mf)
-  def registerSettingSerialization[T](key: SettingKey[T])(implicit serializer: SbtSerializer[T]): Setting[_] =
-    UIKeys.registeredSerializers in Global += RegisteredSerializer(serializer)(key.key.manifest)
+  def registerTaskSerialization[T](key: TaskKey[T])(implicit pickler: Pickler[T], unpickler: Unpickler[T], mf: Manifest[T]): Setting[_] =
+    UIKeys.registeredSerializers in Global += RegisteredSerializer(pickler, unpickler, mf)
+  def registerSettingSerialization[T](key: SettingKey[T])(implicit pickler: Pickler[T], unpickler: Unpickler[T]): Setting[_] =
+    UIKeys.registeredSerializers in Global += RegisteredSerializer(pickler, unpickler, key.key.manifest)
 }
 
 private[sbt] object CommandLineUIServices extends SbtPrivateInteractionService with SbtPrivateSendEventService {
@@ -43,5 +43,5 @@ private[sbt] object CommandLineUIServices extends SbtPrivateInteractionService w
       case _ => false
     }
   }
-  override def sendEvent[T: SPickler](event: T): Unit = ()
+  override def sendEvent[T: Pickler](event: T): Unit = ()
 }

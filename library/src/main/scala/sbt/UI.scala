@@ -13,7 +13,7 @@ sealed trait InteractionService {
 
 sealed trait SendEventService {
   /** Sends an event out to all registered event listeners. */
-  def sendEvent[T: SPickler](event: T): Unit
+  def sendEvent[T: Pickler](event: T): Unit
 }
 
 /**
@@ -57,13 +57,13 @@ sealed trait BackgroundJobService extends java.io.Closeable {
 sealed trait RegisteredSerializer {
   type T
   def manifest: Manifest[T]
-  def serializer: SbtSerializer[T]
+  def serializer: Pickler[T] with Unpickler[T]
 }
 object RegisteredSerializer {
-  def apply[U](s: SbtSerializer[U])(implicit mf: Manifest[U]): RegisteredSerializer =
+  def apply[U](implicit pickler: Pickler[U], unpickler: Unpickler[U], mf: Manifest[U]): RegisteredSerializer =
     new RegisteredSerializer {
       type T = U
-      override val serializer = s
+      override val serializer = PicklerUnpickler[U](pickler, unpickler)
       override val manifest = mf
     }
 }

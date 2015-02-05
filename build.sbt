@@ -1,6 +1,6 @@
 import com.typesafe.sbt.SbtGit._
 
-val serializationVersion = "0.1.0-M1"
+val serializationVersion = "0.1.0-M2"
 val serialization = "org.scala-sbt" %% "serialization" % serializationVersion
 val sbtMothership = "org.scala-sbt" % "sbt" % "0.13.7"
 
