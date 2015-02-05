@@ -19,6 +19,7 @@ object Util {
   def settings: Seq[Setting[_]] =
     SbtScalariform.scalariformSettings ++
     Seq(
+      resolvers += Resolver.typesafeIvyRepo("releases"),
       publishTo := Some(typesafeIvyReleases),
       publishMavenStyle := false,
       scalacOptions <<= (scalaVersion) map { sv =>
