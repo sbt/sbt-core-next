@@ -2,6 +2,7 @@ import com.typesafe.sbt.SbtGit._
 
 val serializationVersion = "0.1.0-M1"
 val serialization = "org.scala-sbt" %% "serialization" % serializationVersion
+val sbtMothership = "org.scala-sbt" % "sbt" % "0.13.7"
 
 val scala210Version = "2.10.4"
 // val scala211Version = "2.11.5"
@@ -31,9 +32,8 @@ lazy val root = (project in file(".")).
 lazy val coreNext = (project in file("library")).
   settings(commonSettings: _*).
   settings(
-    sbtPlugin := true,
     name := "Core Next",
-    libraryDependencies ++= Seq(serialization)
+    libraryDependencies ++= Seq(serialization, sbtMothership % "provided")
   )
 
 lazy val sbtCoreNext = (project in file("sbt-core-next")).
