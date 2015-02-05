@@ -1,4 +1,5 @@
 package sbt
+package plugins
 
 import complete.Parser
 import complete.DefaultParsers
@@ -7,24 +8,25 @@ import Def.Initialize
 import sbinary.DefaultProtocol.StringFormat
 import Cache.seqFormat
 import Attributed.data
+import BackgroundJobServiceKeys._
 
-object SbtBackgroundRunPlugin extends AutoPlugin {
+object BackgroundRunPlugin extends AutoPlugin {
   override def trigger = AllRequirements
   override def requires = plugins.JvmPlugin
 
   override val globalSettings: Seq[Setting[_]] = Seq(
-    UIKeys.jobService := { new CommandLineBackgroundJobService() },
-    Keys.onUnload := { s => try Keys.onUnload.value(s) finally UIKeys.jobService.value.close() },
-    UIKeys.jobList := { UIKeys.jobService.value.list() },
-    UIKeys.jobStop <<= jobStopTask(),
-    UIKeys.jobWaitFor <<= jobWaitForTask())
+    jobService := { new CommandLineBackgroundJobService() },
+    onUnload := { s => try onUnload.value(s) finally jobService.value.close() },
+    jobList := { jobService.value.list() },
+    jobStop <<= jobStopTask(),
+    jobWaitFor <<= jobWaitForTask())
 
   override val projectSettings = inConfig(Compile)(Seq(
     // note that we use the same runner and mainClass as plain run
-    UIKeys.backgroundRunMain <<= backgroundRunMainTask(fullClasspath, runner in run),
-    UIKeys.backgroundRun <<= backgroundRunTask(fullClasspath, mainClass in run, runner in run),
-    Keys.runMain <<= runMainTask(),
-    Keys.run <<= runTask()))
+    backgroundRunMain <<= backgroundRunMainTask(fullClasspath, runner in run),
+    backgroundRun <<= backgroundRunTask(fullClasspath, mainClass in run, runner in run),
+    runMain <<= runMainTask(),
+    run <<= runTask()))
 
   def backgroundRunMainTask(classpath: Initialize[Task[Classpath]], scalaRun: Initialize[Task[ScalaRun]]): Initialize[InputTask[BackgroundJobHandle]] =
     {
@@ -32,7 +34,7 @@ object SbtBackgroundRunPlugin extends AutoPlugin {
       val parser = Defaults.loadForParser(discoveredMainClasses)((s, names) => Defaults.runMainParser(s, names getOrElse Nil))
       Def.inputTask {
         val (mainClass, args) = parser.parsed
-        UIKeys.jobService.value.runInBackgroundThread(Keys.resolvedScoped.value, { (logger, uiContext) =>
+        jobService.value.runInBackgroundThread(resolvedScoped.value, { (logger, uiContext) =>
           toError(scalaRun.value.run(mainClass, data(classpath.value), args, logger))
         })
       }
@@ -46,7 +48,7 @@ object SbtBackgroundRunPlugin extends AutoPlugin {
       val parser = Def.spaceDelimited()
       Def.inputTask {
         val mainClass = mainClassTask.value getOrElse error("No main class detected.")
-        UIKeys.jobService.value.runInBackgroundThread(Keys.resolvedScoped.value, { (logger, uiContext) =>
+        jobService.value.runInBackgroundThread(Keys.resolvedScoped.value, { (logger, uiContext) =>
           // TODO - Copy the classpath into some tmp directory so we don't immediately die if a recompile happens.
           toError(scalaRun.value.run(mainClass, data(classpath.value), parser.parsed, logger))
         })
@@ -55,19 +57,19 @@ object SbtBackgroundRunPlugin extends AutoPlugin {
 
   private def runMainTask(): Initialize[InputTask[Unit]] =
     Def.inputTask {
-      val handle = UIKeys.backgroundRunMain.evaluated
+      val handle = backgroundRunMain.evaluated
       // TODO it would be better to use the jobWaitFor task in case someone
       // customizes that task, but heck if I can figure out how to do it.
-      val service = UIKeys.jobService.value
+      val service = jobService.value
       service.waitFor(handle)
     }
 
   private def runTask(): Initialize[InputTask[Unit]] =
     Def.inputTask {
-      val handle = UIKeys.backgroundRun.evaluated
+      val handle = backgroundRun.evaluated
       // TODO it would be better to use the jobWaitFor task in case someone
       // customizes that task, but heck if I can figure out how to do it.
-      val service = UIKeys.jobService.value
+      val service = jobService.value
       service.waitFor(handle)
     }
 
@@ -85,7 +87,7 @@ object SbtBackgroundRunPlugin extends AutoPlugin {
     import DefaultParsers._
     val parser: State => Parser[Seq[BackgroundJobHandle]] = { state =>
       val extracted = Project.extract(state)
-      val service = extracted.get(UIKeys.jobService)
+      val service = extracted.get(jobService)
       // you might be tempted to use the jobList task here, but the problem
       // is that its result gets cached during execution and therefore stale
       jobIdParser(state, service.list())
@@ -93,7 +95,7 @@ object SbtBackgroundRunPlugin extends AutoPlugin {
     Def.inputTask {
       val handles = parser.parsed
       for (handle <- handles) {
-        f(UIKeys.jobService.value, handle)
+        f(jobService.value, handle)
       }
     }
   }
