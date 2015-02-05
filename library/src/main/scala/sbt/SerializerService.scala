@@ -42,7 +42,7 @@ object RegisteredProtocolConversion {
     }
 }
 
-object SerializerServiceKeys {
+object SerializersKeys {
   val registeredProtocolConversions = settingKey[Seq[RegisteredProtocolConversion]]("Conversions to apply before serializing task results.")
   val registeredSerializers = settingKey[Seq[RegisteredSerializer]]("All the serializers needed for task result values.")
 }
