@@ -2,7 +2,7 @@ package sbt
 package plugins
 
 import sbt.serialization._
-import SerializerServiceKeys._
+import SerializersKeys._
 
 object SerializersPlugin extends AutoPlugin {
   override def trigger = AllRequirements
